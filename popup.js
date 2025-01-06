@@ -1,16 +1,14 @@
-chrome.runtime.sendMessage({type: "GET_CURRENT_TAB"}, (response) => {
-    const tab = response.tab;
-    if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-        return ;
+chrome.storage.local.get('siteTimeData', ({siteTimeData}) => {
+    const container  = document.getElementById('time-tracker');
+    container.innerHTML = '';
+    if (siteTimeData) {
+        for ( const [domain, time] of Object.entries(siteTimeData)) {
+            const div = document.createElement('div');
+            div.textContent = `${domain}: ${time} seconds`;
+            container.appendChild(div);
+        }
     }
-    if (tab) {
-    
-        document.getElementById("tab-info").textContent = `
-        Title: ${tab.title}
-        URL: ${tab.url} 
-        `;
-    } else {
-        document.getElementById("tab-info").textContent = "No tab found";
-    }
-});
+    else {
+            container.textContent = 'No data found';
+        }
+    });
