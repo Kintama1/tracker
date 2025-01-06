@@ -35,6 +35,21 @@ function handleTabChange(newTabId, newUrl) {
     activeTabId = newTabId;
     startTime = now;
 }
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'reload') {
+        const now = Date.now();
+        if (activeTabId !== null && startTime !== null && message.url) {
+            const timespent = Math.floor((now - startTime)/1000);
+            updateSiteTimeData(message.url, timespent);
+            startTime = now;
+            sendResponse({status: 'success'});
+        } else {
+            sendResponse({status: 'error', error: 'No active tab found'});
+        }
+    }
+    return true;
+}); 
+
 
 
 // Listen for tab and take in effect the required changes
@@ -52,10 +67,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.windows.onFocusChanged.addListener((windowId) => {
-    const now = Date.now();
 if (windowId === chrome.windows.WINDOW_ID_NONE) {
     if (activeTabId && startTime) {
         handleTabChange(null, null);
     }
 }
 });
+
