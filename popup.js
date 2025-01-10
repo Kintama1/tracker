@@ -1,139 +1,127 @@
 document.addEventListener('DOMContentLoaded', function() {
-
     const container = document.getElementById('time-tracker');
-    let startTime = Date.now();
+    const startButton = document.getElementById('start');
+    const clearButton = document.getElementById('clear');
     let timeData = {};
-    let currentDomain = null;
-    function getDomain(url) {
-        try {
-            return new URL(url).hostname;
-        }
-        catch{
-            return null;
-    }
-    }
-    function formatTime(seconds){
+
+    function formatTime(seconds) {
         if (seconds < 60) {
-            return `${seconds} s`;
+            return `${seconds}s`;
         }
         if (seconds < 3600) {
-            const minutes = Math.floor(seconds/60);
-            const remaininSeconds = seconds % 60;
-            return `${minutes}m ${remaininSeconds} s`;
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
         }
-        const hours = Math.floor(seconds/3600);
-        const remainingMinutes = Math.floor((seconds % 3600)/60);
+        const hours = Math.floor(seconds / 3600);
+        const remainingMinutes = Math.floor((seconds % 3600) / 60);
         return `${hours}h ${remainingMinutes}m`;
     }
-    //getting the initial data and displaying data
-    chrome.runtime.sendMessage({type: 'getData'}, (response) => {
-        console.log ('message sent: getData');
-        timeData = response.timeData || {};
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            if (tabs[0]){
-                currentDomain = getDomain(tabs[0].url);
-                displayData();
+
+    function displayData() {
+        container.innerHTML = '';
+        const sortedDomains = Object.entries(timeData).sort(([, a], [, b]) => b - a);
+        
+        if (sortedDomains.length === 0) {
+            container.innerHTML = '<div class="no-data">No tracking data available</div>';
+            return;
+        }
+
+        sortedDomains.forEach(([domain, time]) => {
+            const domainDiv = document.createElement('div');
+            domainDiv.className = `domain-entry`;
+            domainDiv.innerHTML = `
+                <span class="domain-name">${domain}</span>
+                <span class="domain-time">${formatTime(time)}</span>
+            `;
+            container.appendChild(domainDiv);
+        });
+    }
+
+    function updateButtonStyle(isTracking) {
+        startButton.textContent = isTracking ? 'Pause' : 'Start';
+        if (isTracking) {
+            startButton.classList.add('active');
+        } else {
+            startButton.classList.remove('active');
+        }
+    }
+
+    // Listen for time updates from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.type === 'timeUpdate') {
+            timeData = message.timeData;
+            displayData();
+        }
+    });
+
+    // Get initial data
+    chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
+        if (response && response.timeData) {
+            timeData = response.timeData;
+            displayData();
+        }
+    });
+
+    // Initialize button state
+    chrome.storage.local.get(['isTracking'], (result) => {
+        const isTracking = result.isTracking || false;
+        updateButtonStyle(isTracking);
+    });
+
+    startButton.addEventListener('click', () => {
+        const isTracking = startButton.textContent === 'Start';
+        chrome.runtime.sendMessage({ type: 'startOrPause', status: isTracking }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError.message);
+                return;
             }
+            updateButtonStyle(isTracking);
         });
     });
 
-    function displayData(){
-        container.innerHTML = '';
-        //sort the data by time spent
-        // it could be empty here, I am going to have to change how it loads this stuff
-        const sortedDomains = Object.entries(timeData).sort(([,a], [,b] ) => b - a); // I have no idea what this means 
-        console.log('just out of curiosity what do we have here', sortedDomains);
-        //creating and appending elemement for each domain
-        sortedDomains.forEach(([domain, time]) => {
-            const domainDiv = document.createElement('div');
-            domainDiv.className = `domain-entry ${domain.replace(/\./g, '-')}`;
-            domainDiv.innerHTML = `
-            <span class="domain-name">${domain}</span>
-            <span class="domain-time">${formatTime(time)}</span>
-            `;
-                                    
-            container.appendChild(domainDiv);
-        }); 
-    }       
-    
-
-    function updateDisplay(){
-        if (currentDomain) {
-            startTime  = Date.now();
-            timeData[currentDomain] = (timeData[currentDomain] || 0) + 1;
-            console.log('timeData', timeData);
-            const domainDiv = document.querySelector(`.domain-entry.${currentDomain.replace(/\./g, '-')}`);
-            if (domainDiv) {
-                domainDiv.querySelector('.domain-time').textContent = formatTime(timeData[currentDomain]);
-            } else {
-                displayData();
+    clearButton.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'clear' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError.message);
+                return;
             }
-        }
-    }
+            timeData = {};
+            displayData();
+        });
+    });
 
-   //updating display while it is open
-    const interval = setInterval(updateDisplay, 1000);
-
-    //handling display when popup is closed
-    window.onbeforeunload = () => {
-        clearInterval(interval);
-        if (currentDomain) {
-            timeData[currentDomain] = (timeData[currentDomain] || 0) + Math.floor((Date.now() - startTime)/1000);
-        }
-    
-        // Delay the message sending slightly
-        setTimeout(() => {
-            chrome.runtime.sendMessage({type: 'popupClosing', data: timeData}, (response) => {
-                console.log('Response from background:', response);
-            });
-        }, 100); // 100ms delay to allow time for message sending
-    };
-    
-
+    // Add styles
     const style = document.createElement('style');
     style.textContent = `
-    .domain-entry {
-        display: flex;
-        justify-content: space-between;
-        padding : 8px;
-        border-bottom: 1px solid #eee;
-    }
-    .domain-name {
-        font-weight: bold;
-        max-width: 70%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+        .domain-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .domain-name {
+            font-weight: bold;
+            max-width: 70%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .domain-time {
             color: #666;
         }
+        .no-data {
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        #start {
+            transition: background-color 0.3s ease;
+        }
+        #start.active {
+            background-color: #ff4444;
+            color: white;
+        }
     `;
     document.head.appendChild(style);
-    });
-
-
-
-
-
-
-const clear = document.getElementById('clear');
-
-// Check if the "clear" button exists in the DOM
-if (clear) {
-    clear.addEventListener('click', () => {
-        chrome.runtime.sendMessage({type : 'clear'}, (response) => {
-            if (chrome.runtime.lastError) {
-                console.log(chrome.runtime.lastError.message);
-                return;
-            }
-        });
-        // Optionally update the UI to reflect the cleared storage
-        const container = document.getElementById('time-tracker');
-        if (container) {
-            container.textContent = 'data has been cleared';
-        }
 });
-} else {
-    console.warn('Clear button not found in DOM.');
-}

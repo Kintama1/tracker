@@ -1,102 +1,160 @@
+let activeTabId = null;
+let startTime = null;
+let siteTimeData = {};
 
-let activeTabId = null; //ID of the currently active tab
-let startTime = null; // When the tab became active
-let siteTimeData = {}; // Time spent on each site
+let currentDomain = null;
+let isTracking = false;
 
-// function to get the domain of an URL
+let lastUpdateTime = null;
+let updateInterval = null;
+
 function getDomain(url) {
     try {
-        return new URL(url).hostname; // Extract hostname from URL by creating a new URL object
-    }
-    catch{
+        if (!url) return null;
+        const hostname = new URL(url).hostname;
+        return hostname || null;
+    } catch {
         return null;
     }
 }
 
-function handleTabChange(newTabId, newUrl) {
-    const domain = getDomain(newUrl);
-    if (activeTabId !== null && startTime !== null && domain) {
-        const now = Date.now();
-        const timespent = Math.floor((now - startTime)/1000);
-        siteTimeData[domain] = (siteTimeData[domain] || 0) + timespent;
-        chrome.storage.local.set({siteTimeData});
-        
-    }
-    // Update the active tab and start time
-    activeTabId = newTabId;
-    startTime = now;
+function incrementTime(domain) {
+    if (!domain) return;
+    
+    siteTimeData[domain] = (siteTimeData[domain] || 0) + 1;
+    console.log(`Time incremented for ${domain}:`, siteTimeData[domain]);
+    
+    // Save to storage and notify popup if open
+    chrome.storage.local.set({ siteTimeData }, () => {
+        chrome.runtime.sendMessage({
+            type: 'timeUpdate',
+            timeData: siteTimeData
+        }).catch(() => {
+            // Ignore error if popup is closed
+        });
+    });
 }
 
+function startTracking() {
+    if (updateInterval) {
+        clearInterval(updateInterval);
+    }
+    
+    updateInterval = setInterval(() => {
+        if (isTracking && currentDomain) {
+            incrementTime(currentDomain);
+        }
+    }, 1000);
+}
 
+function stopTracking() {
+    if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+    }
+}
+
+// Message handling
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('message received', message);
     if (message.type === 'getData') {
-    console.log('popup opening 1x');
-    //popup is opening, time to calulate 
-    // and hand off data
-    if (activeTabId !== null && startTime !== null) {
-        console.log('popup opening');
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            if (tabs[0]){
-                const domain = getDomain(tabs[0].url);
-                if (domain) {
-                    const now = Date.now();
-                    const timespent = Math.floor((now - startTime)/1000);
-                    siteTimeData[domain] = (siteTimeData[domain] || 0) + timespent;
+        sendResponse({ timeData: siteTimeData });
+        return true;
+    }
+    
+    if (message.type === 'startOrPause') {
+        isTracking = message.status;
+        console.log('Tracking status changed to:', isTracking);
+        
+        if (isTracking) {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    activeTabId = tabs[0].id;
+                    currentDomain = getDomain(tabs[0].url);
+                    startTime = Date.now();
+                    startTracking();
+                    console.log('Started tracking for:', currentDomain);
                 }
-            }
-        });
+            });
+        } else {
+            stopTracking();
+            activeTabId = null;
+            startTime = null;
+            currentDomain = null;
+        }
+        
+        chrome.storage.local.set({ isTracking });
+        sendResponse({ status: 'success' });
+        return true;
     }
-    //reset the active tab and start time
-    activeTabId = null;
-    startTime = null;
-    sendResponse({timeData: siteTimeData});
-    }
+    
     if (message.type === 'clear') {
         siteTimeData = {};
-        activeTabId = null;
-        startTime = null;
-        sendResponse({status: 'success'});
+        chrome.storage.local.set({ siteTimeData });
+        console.log('Cleared time data');
+        sendResponse({ status: 'success' });
+        return true;
     }
-    if (message.type === 'popupClosing') {
-        console.log('popup closing');
-        siteTimeData = message.data;
-        chrome.storage.local.set({siteTimeData});
-        console.log('popup closing', message.data);
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            if (tabs[0]){
+});
+
+// Window focus handling
+chrome.windows.onFocusChanged.addListener((windowId) => {
+    if (!isTracking) return;
+    
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        console.log('Window lost focus');
+        stopTracking();
+    } else {
+        console.log('Window gained focus');
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
                 activeTabId = tabs[0].id;
+                currentDomain = getDomain(tabs[0].url);
                 startTime = Date.now();
+                startTracking();
+                console.log('Resumed tracking for:', currentDomain);
             }
         });
-        
     }
-    return true;
-}); 
+});
 
-
-
-// Listens updates in what tab is the currently active tab
+// Tab event listeners
 chrome.tabs.onActivated.addListener((activeInfo) => {
+    if (!isTracking) return;
+    stopTracking();
+    
     chrome.tabs.get(activeInfo.tabId, (tab) => {
-        handleTabChange(tab.id, tab.url);
+        activeTabId = tab.id;
+        currentDomain = getDomain(tab.url);
+        startTime = Date.now();
+        startTracking();
+        console.log('Tab activated:', currentDomain);
     });
-    console.log(activeInfo, "tab activated event registered");
 });
 
-// Listen for when tab changes
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tabId === activeTabId && changeInfo.url){
-        handleTabChange(tabId, changeInfo.url);
+    if (!isTracking) return;
+    if (tabId === activeTabId && changeInfo.url) {
+        stopTracking();
+        currentDomain = getDomain(changeInfo.url);
+        startTime = Date.now();
+        startTracking();
+        console.log('Tab URL updated:', currentDomain);
     }
-    console.log(tabId, changeInfo, tab, "tab updated event registered");
 });
 
-chrome.windows.onFocusChanged.addListener((windowId) => {
-if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    if (activeTabId && startTime) {
-        handleTabChange(null, null);
+// Initialize from storage
+chrome.storage.local.get(['isTracking', 'siteTimeData'], (result) => {
+    isTracking = result.isTracking || false;
+    siteTimeData = result.siteTimeData || {};
+    
+    if (isTracking) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+                activeTabId = tabs[0].id;
+                currentDomain = getDomain(tabs[0].url);
+                startTime = Date.now();
+                startTracking();
+            }
+        });
     }
-}
 });
-
