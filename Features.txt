@@ -1,0 +1,13 @@
+Features I can work on
+
+- Clicking the link and going to the specific website
+- Improve performance in the background
+- Have an overall timer and breakdown of sites
+
+-----
+UI implementation:
+-- Pie chart, or doghnut chart
+
+-- Generall timer
+
+-- window for all websites (the one I currently have)
