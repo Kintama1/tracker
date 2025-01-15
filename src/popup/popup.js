@@ -18,6 +18,40 @@ document.addEventListener('DOMContentLoaded', function() {
     //getting the daughnut and list buttons, disabling the daughnut button as it is the default view
     const DaughnutOption = document.getElementById('daughnut');
     DaughnutOption.disabled = true;
+    let canvas;
+    let otherDomains = [];
+
+    function showOtherModal() {
+        const modal = document.getElementById('otherModal');
+        const modalBody = modal.querySelector('.modal-body'); // Fixed selector
+        modalBody.innerHTML = '';
+
+        otherDomains.forEach(([domain, [favicon, time]]) => {
+            const domainDiv = document.createElement('div');
+            domainDiv.className = 'domain-entry';
+            domainDiv.innerHTML = `
+                <img src="${favicon || 'assets/default-favicon.png'}" alt="Favicon" width="16" height="16">
+                <span class="domain-name">${domain}</span>
+                <span class="domain-time">${formatTime(time)}</span>
+            `;
+            modalBody.appendChild(domainDiv);
+        });
+
+        modal.style.display = 'block';
+
+        // Add event listener for closing modal
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        };
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    }
 
     const listOption = document.getElementById('list');
 
@@ -181,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         totalTime = sortedDomains.reduce((acc, [, [, time]]) => acc + time, 0);
         const topDomains = sortedDomains.slice(0, maxSegments - 1);
-        const otherDomains = sortedDomains.slice(maxSegments - 1);
+        otherDomains = sortedDomains.slice(maxSegments - 1);
         const otherTime = otherDomains.reduce((acc, [, [, time]]) => acc + time, 0);
 
         const labels = [...topDomains.map(([domain]) => domain), 'Others'];
@@ -193,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!donutChart) {
             container.innerHTML = '';
-            const canvas = document.createElement('canvas');
+            canvas = document.createElement('canvas');
             canvas.id = 'donut-chart';
             container.appendChild(canvas);
             
@@ -214,6 +248,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             donutChart.faviconData = favicons;
+            
+            canvas.addEventListener('click', (event) => {
+                const points = donutChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (points.length) {
+                    const firstPoint = points[0];
+                    const label = donutChart.data.labels[firstPoint.index];
+                    if (label === 'Others') {
+                        showOtherModal();
+                    }
+                }
+            });
         } else {
             donutChart.data.labels = labels;
             donutChart.data.datasets[0].data = data;
