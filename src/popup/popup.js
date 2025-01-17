@@ -98,12 +98,12 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.font = '1rem Arial'; 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#666'; 
+            ctx.fillStyle = '#35918b    '; 
             ctx.fillText('Total Time', centerX, centerY - 10); 
 
             // Draw the actual time
             ctx.font = '1.5rem Arial'; 
-            ctx.fillStyle = '#000'; 
+            ctx.fillStyle = '#35918b '; 
             ctx.fillText(formatTime(totalTime), centerX, centerY + 15); 
 
             ctx.restore();
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             donutChart.faviconData = favicons;
-            
+
             canvas.addEventListener('click', (event) => {
                 const points = donutChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
                 if (points.length) {
@@ -418,15 +418,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         #start.active {
             background-color: #ff4444;
-            color: white;
-        }
-        #daughnut.active {
-            background-color:rgb(142, 142, 142);
-            color: white;
-
-        }
-        #list.active {
-            background-color:rgb(142, 142, 142);
             color: white;
         }
     `;

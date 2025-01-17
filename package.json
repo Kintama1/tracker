@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "src/popup/popup.js",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "watch": "webpack --config webpack.config.js --watch"
+    "build": "webpack --config webpack.config.js --mode=production",
+    "dev": "webpack --config webpack.config.js --mode=development",
+    "watch": "webpack --watch --config webpack.config.js --mode=development"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "mini-css-extract-plugin": "^2.9.2",
     "style-loader": "^4.0.0",
     "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "webpack-ext-reloader": "^1.1.13"
   }
 }

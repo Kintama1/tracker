@@ -2,35 +2,108 @@ body {
     font-family: 'Open Sans', sans-serif;
     font-size: 14px;
     line-height: 1.6;
-    color: #333;
+    color: #35918b;
     margin: 0;
     padding: 0;
     height : 400px;
     width : 350px;
     text-align: center;
-    background: #c4c1c1;
+    background: #050518;
 }
 #time-tracker {
     padding: 10px;
-    background: #f9f9f9;
-    border-bottom: 1px solid #e1e1e1;
+    background: #050518;
 }
 .header {
-    margin : 10px;
+    margin: 10px;
     display: flex;
     justify-content: space-between;
+    color: #35918b;
 }
-.icon-container{
+
+.icon-container {
     display: flex;
     justify-content: space-around;
     width: 100px;
+    gap: 10px;
     align-items: center;
 }
-#daughnut.active {
-    background-color:rgb(142, 142, 142);
-    color: white;
+
+.icons {
+    background-color: #aaaadf;
+    transition: background-color 0.3s ease;
+    border-radius: 4px;
+    border: none;
+}
+
+.icons:hover {
+    background-color: #292091;
+}
+
+/* SVG colors for non-active state */
+.icons svg {
+    stroke: #0000ff; /* Blue stroke for non-active state */
+}
+
+.icons svg path,
+.icons svg circle {
+    stroke: #0000ff; /* Blue stroke for paths and circles */
+}
+
+/* SVG colors for active state */
+.icons.active svg {
+    stroke: #00ff00; /* Green stroke for active state */
+}
+
+.icons.active svg path,
+.icons.active svg circle {
+    stroke: #00ff00; /* Green stroke for paths and circles */
+}
+
+/* Specific styles for list icon fill */
+#list svg g[id="Dribbble-Light-Preview"] g[id="icons"] path {
+    fill: #0000ff; /* Blue fill for non-active state */
+}
+
+#list.active svg g[id="Dribbble-Light-Preview"] g[id="icons"] path {
+    fill: #00ff00; /* Green fill for active state */
+}
+
+/* Keep your existing hover styles */
+.icons:hover {
+    background-color: #292091;
+}
+
+#daughnut.active,
+#list.active {
+    background-color: #292091;
+}
+
+
+
+
+
+
+/* Buttons section working on them */
+.button-container {
+    display: flex;
+    justify-content: center;
+    padding : 1rem;
+    gap: 2rem;
+    margin-bottom: 2rem;
 
 }
+.buttons {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: white;
+    background-color: #aaaadf;
+    transition: background-color 0.3s;
+}
+
 
 /* Modal for other segment */
 
@@ -49,7 +122,7 @@ body {
     top : 50%;
     left : 50%;
     transform : translate(-50%,-50%);
-    background : #fff;
+    background : #12122d;
     padding : 20px;
     border-radius: 8px;
     width : 80%;

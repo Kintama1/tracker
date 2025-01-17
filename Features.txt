@@ -6,8 +6,8 @@ Features I can work on
 
 -----
 UI implementation:
--- Pie chart, or doghnut chart
+-increase the padding below the pause and clear button, change how the buttons look, modernize implementation
+- play around with the colors see what works
 
--- Generall timer
 
--- window for all websites (the one I currently have)
+
