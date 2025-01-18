@@ -117,7 +117,7 @@ function favRoutine(currentDomain, currentFavIcon) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'getData') {
-        sendResponse({ timeData: siteTimeData });
+        sendResponse({ timeData: siteTimeData, display: display });
         return true;
     }
     
@@ -161,14 +161,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message.type === 'daughnut') {
         display = "daughnut";
-        console.log('Displaying: ', display);
+        console.log('Displaying: ', display, 'for tracking status: ', isTracking);  
+        if (!isTracking){
+            console.log('sending response as it is not tracking ', display);
+            sendResponse({ timeData: siteTimeData, display: display });
+        }
+        else{
         sendResponse({ status: 'success' });
+        }
         return true;
     }
     if (message.type === 'list') {  
         display = "list";
-        console.log('Displaying: ', display);
+        console.log('Displaying: ', display, 'for tracking status: ', isTracking);  
+        if (!isTracking){
+            console.log('sending response as it is not tracking ', display);
+            sendResponse({ timeData: siteTimeData, display: display });
+        }
+        else{
         sendResponse({ status: 'success' });
+        }
         return true;
     }
 });

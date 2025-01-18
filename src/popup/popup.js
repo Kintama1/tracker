@@ -1,305 +1,29 @@
-import { Chart } from 'chart.js/auto';
+import { ChartComponent } from './components/Chart';
+import { ListView } from './components/ListView';
+import { Modal } from './components/Modal';
 import './popup.css';
+
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    //when it first loads, it always shows the donut view
-    chrome.runtime.sendMessage({ type: 'daughnut' }, (response) => {
-    });
-
-    // gets the container to display the data either in list or donut
     const container = document.getElementById('time-tracker');
-    container.innerHTML = '';
-
-    //getting the start and clear buttons
     const startButton = document.getElementById('start');
     const clearButton = document.getElementById('clear');
-
-    //getting the daughnut and list buttons, disabling the daughnut button as it is the default view
-    const DaughnutOption = document.getElementById('daughnut');
-    DaughnutOption.disabled = true;
-    let canvas;
-    let otherDomains = [];
-
-    function showOtherModal() {
-        const modal = document.getElementById('otherModal');
-        const modalBody = modal.querySelector('.modal-body'); // Fixed selector
-        modalBody.innerHTML = '';
-
-        otherDomains.forEach(([domain, [favicon, time]]) => {
-            const domainDiv = document.createElement('div');
-            domainDiv.className = 'domain-entry';
-            domainDiv.innerHTML = `
-                <img src="${favicon || 'assets/default-favicon.png'}" alt="Favicon" width="16" height="16">
-                <span class="domain-name">${domain}</span>
-                <span class="domain-time">${formatTime(time)}</span>
-            `;
-            modalBody.appendChild(domainDiv);
-        });
-
-        modal.style.display = 'block';
-
-        // Add event listener for closing modal
-        const closeBtn = modal.querySelector('.close-btn');
-        closeBtn.onclick = function() {
-            modal.style.display = 'none';
-        };
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        };
-    }
-
+    const donutOption = document.getElementById('daughnut');
     const listOption = document.getElementById('list');
+    const histView = document.getElementById('history');
 
-    // Chart options
-    const chartOptions = {
-        cutout: '70%',
-        responsive: true,
-        animation: false, // Disable default animations to prevent flickering
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                enabled: true, // Keep tooltips enabled
-                callbacks: {
-                    label: function(context) {
-                        const domain = context.label;
-                        const time = context.raw;
-                        return `${domain}: ${formatTime(time)}`;
-                    }
-                }
-            }
-        },
-        elements: {
-            arc: {
-                borderWidth: 0
-            }
-        },
-        maintainAspectRatio: false
-    };
-
-    const timerPlugin = {
-        id: 'timerPlugin',
-        beforeDraw: (chart) => {
-            const { ctx, chartArea } = chart;
-            const { top, bottom, left, right } = chartArea;
-            
-            const centerX = (right + left) / 2;
-            const centerY = (top + bottom) / 2;
-
-            ctx.save();
-
-            // Draw "Total Time" text
-            ctx.font = '1rem Arial'; 
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#35918b    '; 
-            ctx.fillText('Total Time', centerX, centerY - 10); 
-
-            // Draw the actual time
-            ctx.font = '1.5rem Arial'; 
-            ctx.fillStyle = '#35918b '; 
-            ctx.fillText(formatTime(totalTime), centerX, centerY + 15); 
-
-            ctx.restore();
-        }
-    };
-
-    // Interval for updating favicons on donut chart
-    let faviconUpdateInterval;
-    // Chart instance
-    let donutChart;
-
-    //timeData is an object that stores the time spent on each domain
+    // State variables
+    let isTracking = false;
     let timeData = {};
-    
-    // Total time spent tracking
-    let totalTime = null;
+    let currentView = 'donut';
 
-    /* HELPER FUCNTION SECTIONS*/
+    // Component instances
+    const modal = new Modal();
+    let chart = null;
+    let listView = null;
 
-    // Format time in seconds to a human-readable format
-    function formatTime(seconds) {
-        if (seconds < 60) {
-            return `${seconds}s`;
-        }
-        if (seconds < 3600) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}m ${remainingSeconds}s`;
-        }
-        const hours = Math.floor(seconds / 3600);
-        const remainingMinutes = Math.floor((seconds % 3600) / 60);
-        return `${hours}h ${remainingMinutes}m`;
-    }
-
-    /* Display function sections */
-    
-    // Draw favicons on donut chart
-    function drawFaviconsOnDonut(chart, favicons) {
-        const { ctx, chartArea } = chart;
-        if (!chartArea) return;
-        
-        const { top, bottom, left, right } = chartArea;
-        const centerX = (right + left) / 2;
-        const centerY = (top + bottom) / 2;
-        const radius = Math.min(chartArea.width, chartArea.height) / 2;
-        const iconRadius = radius * 0.85;
-        
-        favicons.forEach((favicon, index) => {
-            if (!chart.getDatasetMeta(0).data[index]) return;
-            
-            const segment = chart.getDatasetMeta(0).data[index];
-           
-
-            const rotationOffset = Math.PI/1.95 ; // Rotate by 30 degrees
-            const segmentAngle = (segment.startAngle + segment.endAngle) / 2 - Math.PI / 2 + rotationOffset;
-            
-            const x = centerX + Math.cos(segmentAngle) * iconRadius;
-            const y = centerY + Math.sin(segmentAngle) * iconRadius;
-            
-            loadAndDrawIcon(favicon, x, y, ctx);
-        });
-    }
-
-    
-    function loadAndDrawIcon(faviconUrl, x, y, ctx) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = () => {
-            const iconSize = 20; // Slightly larger icons
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(x, y, iconSize/2, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(img, x - iconSize/2, y - iconSize/2, iconSize, iconSize);
-            ctx.restore();
-        };
-        
-        img.onerror = () => {
-            const defaultImg = new Image();
-            defaultImg.src = 'assets/default-favicon.png';
-            defaultImg.onload = () => {
-                const iconSize = 20;
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(x, y, iconSize/2, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(defaultImg, x - iconSize/2, y - iconSize/2, iconSize, iconSize);
-                ctx.restore();
-            };
-        };
-        
-        img.src = faviconUrl;
-    }
-    
-
-    //Donut display
-    function donutDisplay() {
-        // Clear any existing interval
-        if (faviconUpdateInterval) {
-            clearInterval(faviconUpdateInterval);
-        }
-
-        const maxSegments = 5;
-        const colorPalette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD'];
-
-        const sortedDomains = Object.entries(timeData)
-            .sort(([, a], [, b]) => b[1] - a[1]);
-
-        totalTime = sortedDomains.reduce((acc, [, [, time]]) => acc + time, 0);
-        const topDomains = sortedDomains.slice(0, maxSegments - 1);
-        otherDomains = sortedDomains.slice(maxSegments - 1);
-        const otherTime = otherDomains.reduce((acc, [, [, time]]) => acc + time, 0);
-
-        const labels = [...topDomains.map(([domain]) => domain), 'Others'];
-        const data = [...topDomains.map(([, [, time]]) => time), otherTime];
-        const favicons = topDomains.map(([, [favicon]]) => favicon || 'assets/default-favicon.png');
-        if (favicons.length >= maxSegments -1) {
-            favicons.push('assets/others-favicon.png');
-        }
-
-        if (!donutChart) {
-            container.innerHTML = '';
-            canvas = document.createElement('canvas');
-            canvas.id = 'donut-chart';
-            container.appendChild(canvas);
-            
-            const ctx = canvas.getContext('2d');
-            
-            donutChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels,
-                    datasets: [{
-                        data,
-                        backgroundColor: colorPalette.slice(0, maxSegments),
-                    }]
-                },
-                options: chartOptions,
-                plugins: [timerPlugin]
-
-            });
-            
-            donutChart.faviconData = favicons;
-
-            canvas.addEventListener('click', (event) => {
-                const points = donutChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-                if (points.length) {
-                    const firstPoint = points[0];
-                    const label = donutChart.data.labels[firstPoint.index];
-                    if (label === 'Others') {
-                        showOtherModal();
-                    }
-                }
-            });
-        } else {
-            donutChart.data.labels = labels;
-            donutChart.data.datasets[0].data = data;
-            donutChart.faviconData = favicons;
-            donutChart.update('none');
-        }
-
-        // Initial draw of favicons
-        drawFaviconsOnDonut(donutChart, favicons);
-
-        // Set up a regular interval to redraw favicons
-        faviconUpdateInterval = setInterval(() => {
-            if (donutChart && donutChart.ctx && donutChart.faviconData) {
-                drawFaviconsOnDonut(donutChart, donutChart.faviconData);
-            }
-        }, 100); // Update every 100ms to ensure icons stay visible
-    }
-
-        
-    
-    function listDisplay() {
-        container.innerHTML = '';
-        const sortedDomains = Object.entries(timeData).sort(([, a], [, b]) => b[1] - a[1]);
-        
-        if (sortedDomains.length === 0) {
-            container.innerHTML = '<div class="no-data">No tracking data available</div>';
-            return;
-        }
-
-        sortedDomains.forEach(([domain, [favicon, time]]) => {
-            const domainDiv = document.createElement('div');
-            domainDiv.className = `domain-entry`;
-            domainDiv.innerHTML = `
-                <img src="${favicon}" alt="Favicon" width="16" height="16">
-                <span class="domain-name">${domain}</span>
-                <span class="domain-time">${formatTime(time)}</span>
-            `;
-            container.appendChild(domainDiv);
-        });
-    }
-
+    // UI State Management
     function updateButtonStyle(isTracking) {
         startButton.textContent = isTracking ? 'Pause' : 'Start';
         if (isTracking) {
@@ -308,87 +32,199 @@ document.addEventListener('DOMContentLoaded', function() {
             startButton.classList.remove('active');
         }
     }
+
     function updateOptionsStyle(button) {
-        if (button === DaughnutOption) {
-            DaughnutOption.classList.add('active');
+        if (button === donutOption) {
+            donutOption.classList.add('active');
             listOption.classList.remove('active');
-            DaughnutOption.disabled = true;
+            donutOption.disabled = true;
             listOption.disabled = false;
+            currentView = 'donut';
         } else {
             listOption.classList.add('active');
-            DaughnutOption.classList.remove('active');
+            donutOption.classList.remove('active');
             listOption.disabled = true;
-            DaughnutOption.disabled = false;
+            donutOption.disabled = false;
+            currentView = 'list';
+        }
     }
-}
-    // Listen for time updates from background script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === 'timeUpdateList') {
-            timeData = message.timeData;
-            listDisplay();
-        }
-        if (message.type === 'timeUpdateDaughnut') {
-            timeData = message.timeData;
-            donutDisplay();
-        }
-    });
 
-    // Get initial data
-    chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
-        if (response && response.timeData ) {
-            timeData = response.timeData;
-            listDisplay();
+    // Display Management
+    function initializeChart() {
+        if (!chart) {
+            chart = new ChartComponent(container, () => {
+                if (chart && chart.otherDomains) {
+                    modal.showOtherDomains(chart.otherDomains);
+                }
+            });
         }
-    });
+        return chart;
+    }
 
-    // Initialize button state
-    chrome.storage.local.get(['isTracking'], (result) => {
-        const isTracking = result.isTracking || false;
-        updateButtonStyle(isTracking);
-    });
+    function initializeListView() {
+        if (!listView) {
+            listView = new ListView(container);
+        }
+        return listView;
+    }
 
-    // Add event listeners
-    DaughnutOption.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'daughnut' }, (response) => {
-            updateOptionsStyle(DaughnutOption);
+    function updateDisplay(newTimeData, displayType = currentView) {
+        timeData = newTimeData;
+        
+        if (displayType === 'donut') {
+            if (listView) {
+                listView.destroy();
+                listView = null;
+            }
+            initializeChart().update(timeData);
+        } else {
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            initializeListView().update(timeData);
+        }
+    }
+
+    // Initialize popup
+    function initializePopup() {
+        chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
+            if (response && response.timeData) {
+                timeData = response.timeData;
+                if (response.display === "daughnut") {
+                    updateOptionsStyle(donutOption);
+                    updateDisplay(timeData, 'donut');
+                } else {
+                    updateOptionsStyle(listOption);
+                    updateDisplay(timeData, 'list');
+                }
+            }
         });
-        container.innerHTML = '';
 
+        // Get tracking status to update button
+        chrome.storage.local.get(['isTracking'], (result) => {
+            isTracking = result.isTracking || false;
+            updateButtonStyle(isTracking);
+        });
+    }
+
+    // Event Handlers
+    function handleStartClick() {
+        const newTrackingStatus = startButton.textContent === 'Start';
+        chrome.runtime.sendMessage({ type: 'startOrPause', status: newTrackingStatus }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError.message);
+                return;
+            }
+            updateButtonStyle(newTrackingStatus);
+            
+            if (!newTrackingStatus) {
+                chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
+                    if (response && response.timeData) {
+                        updateDisplay(response.timeData);
+                    }
+                });
+            }
+        });
+    }
+
+    function handleClearData(shouldSaveSession) {
+        if (shouldSaveSession) {
+            const session = {
+                timestamp: Date.now(),
+                timeData: {...timeData}
+            };
+            
+            chrome.storage.local.get(['sessions'], (result) => {
+                const sessions = result.sessions || [];
+                sessions.push(session);
+                chrome.storage.local.set({ sessions }, () => {
+                    chrome.runtime.sendMessage({ type: 'clear' }, () => {
+                        timeData = {};
+                        updateDisplay(timeData);
+                    });
+                });
+            });
+        } else {
+            chrome.runtime.sendMessage({ type: 'clear' }, () => {
+                timeData = {};
+                updateDisplay(timeData);
+            });
+        }
+    }
+
+    // Setup event listeners
+    donutOption.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'daughnut' }, (response) => {
+            updateOptionsStyle(donutOption);
+            if (response.timeData) {
+                updateDisplay(response.timeData, 'donut');
+            }
+        });
     });
 
     listOption.addEventListener('click', () => {
-        if (faviconUpdateInterval) {
-            clearInterval(faviconUpdateInterval);
-        }
         chrome.runtime.sendMessage({ type: 'list' }, (response) => {
             updateOptionsStyle(listOption);
+            if (response.timeData) {
+                updateDisplay(response.timeData, 'list');
+            }
         });
-        donutChart = null;
-        
     });
 
-    startButton.addEventListener('click', () => {
-        const isTracking = startButton.textContent === 'Start';
-        chrome.runtime.sendMessage({ type: 'startOrPause', status: isTracking }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError.message);
-                return;
-            }
-            updateButtonStyle(isTracking);
-        });
+    histView.addEventListener('click', () => {
+        window.location.href = 'history.html';
     });
+
+    startButton.addEventListener('click', handleStartClick);
 
     clearButton.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'clear' }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError.message);
-                return;
-            }
-            timeData = {};
-            listDisplay();
-        });
+        modal.showClearConfirm(handleClearData);
     });
 
+    // Message listener
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.timeData) {
+            if (message.type === 'timeUpdateList' && currentView === 'list') {
+                updateDisplay(message.timeData, 'list');
+            } else if (message.type === 'timeUpdateDaughnut' && currentView === 'donut') {
+                updateDisplay(message.timeData, 'donut');
+            } else if (!isTracking) {
+                updateDisplay(message.timeData);
+            }
+        }
+    });
+
+    // Initialize
+    donutOption.disabled = true;
+    container.innerHTML = '';
+    initializePopup();
+
+    // Cleanup when popup closes
+    window.addEventListener('unload', () => {
+        if (chart) {
+            chart.destroy();
+        }
+        if (listView) {
+            listView.destroy();
+        }
+        modal.destroy();
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     // Add styles
     const style = document.createElement('style');
     style.textContent = `

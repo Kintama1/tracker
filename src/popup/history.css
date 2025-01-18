@@ -1,0 +1,44 @@
+/* Import base styles */
+@import './popup.css';
+
+/* History specific styles */
+.history-container {
+    padding: 20px;
+    color: #35918b;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.session-item {
+    background: #12122d;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.session-item:hover {
+    background: #1a1a3a;
+}
+
+.session-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Override any conflicting styles */
+body {
+    height: auto;
+    min-height: 400px;
+}
