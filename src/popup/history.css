@@ -1,7 +1,17 @@
 /* Import base styles */
 @import './popup.css';
+@import './listview.css';
 
-/* History specific styles */
+/* Base styles */
+body {
+    background-color: #0f0f1a;
+    height: auto;
+    min-height: 400px;
+    margin: 0;
+    padding: 0;
+}
+
+/* History container styles */
 .history-container {
     padding: 20px;
     color: #35918b;
@@ -14,6 +24,7 @@
     margin-bottom: 20px;
 }
 
+/* Session list styles */
 .session-list {
     display: flex;
     flex-direction: column;
@@ -25,7 +36,8 @@
     padding: 15px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .session-item:hover {
@@ -35,10 +47,166 @@
 .session-info {
     display: flex;
     justify-content: space-between;
+    font-weight: 500;
 }
 
-/* Override any conflicting styles */
-body {
-    height: auto;
-    min-height: 400px;
+.sites-count {
+    color: #999;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.expand-indicator {
+    position: absolute;
+    right: 15px;
+    bottom: 10px;
+    color: #999;
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.session-item.expanded {
+    background: #1a1a3a;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+}
+
+.session-item.expanded .expand-indicator {
+    transform: rotate(180deg);
+}
+
+/* Expanded view styles */
+.session-expanded-view {
+    background: #12122d;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: 0;
+    padding: 20px;
+}
+
+/* View toggle styles */
+.view-toggle-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.view-toggle-btn {
+    padding: 8px 24px;
+    border: none;
+    border-radius: 8px;
+    background-color: #1a1a3a;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.view-toggle-btn:hover {
+    background-color: #252538;
+}
+
+.view-toggle-btn.active {
+    background-color: #35918b;
+    color: white;
+}
+
+.view-container {
+    height: 300px;
+    position: relative;
+}
+
+/* List View Specific Styles */
+.list-scroll-container {
+    height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-right: -8px;
+}
+
+.domain-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 8px 0;
+}
+
+.domain-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px;
+}
+
+.favicon-container {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favicon-image {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.domain-content {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.domain-name {
+    color: #35918b;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+
+.domain-time {
+    color: #35918b;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+/* Scrollbar Styling */
+.list-scroll-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.list-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.list-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(53, 145, 139, 0.3);
+    border-radius: 4px;
+}
+
+.list-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(53, 145, 139, 0.5);
+}
+
+/* Back button style */
+.buttons {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #35918b;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.buttons:hover {
+    background-color: #2a7571;
 }

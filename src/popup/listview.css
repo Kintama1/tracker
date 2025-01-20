@@ -1,0 +1,94 @@
+/* listview.css */
+.list-scroll-container {
+    height: 300px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.domain-list-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.domain-entry {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #252538;
+    position: relative;
+}
+
+.favicon-container {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favicon-image {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.domain-name {
+    color: #35918b;
+    flex: 1;
+    margin-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+
+.domain-time {
+    color: #35918b;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+/* Scrollbar Styling */
+.list-scroll-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.list-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.list-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(53, 145, 139, 0.3);
+    border-radius: 4px;
+}
+
+.list-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(53, 145, 139, 0.5);
+}
+
+/* No data state */
+.no-data {
+    color: #666;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Add these styles to your listview.css */
+.domain-name {
+    color: #35918b;
+    flex: 1;
+    margin-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    text-decoration: none; /* Remove default underline */
+    transition: color 0.2s ease;
+}
+
+.domain-name:hover {
+    color: #40b1aa; /* Slightly lighter shade for hover */
+    text-decoration: underline; /* Add underline on hover */
+}

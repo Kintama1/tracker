@@ -1,3 +1,4 @@
+// src/popup/services/storage.js
 export class StorageService {
     static async getSessions() {
         return new Promise((resolve) => {
@@ -15,6 +16,14 @@ export class StorageService {
         });
         return new Promise((resolve) => {
             chrome.storage.local.set({ sessions }, resolve);
+        });
+    }
+
+    static async getTrackingStatus() {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['isTracking'], (result) => {
+                resolve(result.isTracking || false);
+            });
         });
     }
 }

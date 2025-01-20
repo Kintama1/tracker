@@ -1,9 +1,9 @@
+import { TrackingState } from './state/trackingState.js';
+import { ChromeMessagingService } from './services/chromeMessaging.js';
 import { ChartComponent } from './components/Chart';
 import { ListView } from './components/ListView';
 import { Modal } from './components/Modal';
 import './popup.css';
-
-
 document.addEventListener('DOMContentLoaded', function() {
 
     const container = document.getElementById('time-tracker');
@@ -13,10 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const listOption = document.getElementById('list');
     const histView = document.getElementById('history');
 
-    // State variables
-    let isTracking = false;
-    let timeData = {};
-    let currentView = 'donut';
+    // Initialize state and services
+    const trackingState = new TrackingState();
+    const messagingService = new ChromeMessagingService(trackingState);
 
     // Component instances
     const modal = new Modal();
@@ -26,34 +25,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // UI State Management
     function updateButtonStyle(isTracking) {
         startButton.textContent = isTracking ? 'Pause' : 'Start';
-        if (isTracking) {
-            startButton.classList.add('active');
-        } else {
-            startButton.classList.remove('active');
-        }
+        startButton.classList.toggle('active', isTracking);
     }
 
     function updateOptionsStyle(button) {
-        if (button === donutOption) {
-            donutOption.classList.add('active');
-            listOption.classList.remove('active');
-            donutOption.disabled = true;
-            listOption.disabled = false;
-            currentView = 'donut';
-        } else {
-            listOption.classList.add('active');
-            donutOption.classList.remove('active');
-            listOption.disabled = true;
-            donutOption.disabled = false;
-            currentView = 'list';
-        }
+        const isDonut = button === donutOption;
+        donutOption.classList.toggle('active', isDonut);
+        listOption.classList.toggle('active', !isDonut);
+        donutOption.disabled = isDonut;
+        listOption.disabled = !isDonut;
+        trackingState.setCurrentView(isDonut ? 'donut' : 'list');
     }
 
     // Display Management
     function initializeChart() {
         if (!chart) {
             chart = new ChartComponent(container, () => {
-                if (chart && chart.otherDomains) {
+                if (chart?.otherDomains) {
                     modal.showOtherDomains(chart.otherDomains);
                 }
             });
@@ -68,108 +56,70 @@ document.addEventListener('DOMContentLoaded', function() {
         return listView;
     }
 
-    function updateDisplay(newTimeData, displayType = currentView) {
-        timeData = newTimeData;
+    function updateDisplay(newTimeData, displayType = trackingState.currentView) {
+        trackingState.setTimeData(newTimeData);
         
         if (displayType === 'donut') {
             if (listView) {
                 listView.destroy();
                 listView = null;
             }
-            initializeChart().update(timeData);
+            initializeChart().update(newTimeData);
         } else {
             if (chart) {
                 chart.destroy();
                 chart = null;
             }
-            initializeListView().update(timeData);
+            initializeListView().update(newTimeData);
         }
     }
 
     // Initialize popup
-    function initializePopup() {
-        chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
-            if (response && response.timeData) {
-                timeData = response.timeData;
-                if (response.display === "daughnut") {
-                    updateOptionsStyle(donutOption);
-                    updateDisplay(timeData, 'donut');
-                } else {
-                    updateOptionsStyle(listOption);
-                    updateDisplay(timeData, 'list');
-                }
+    async function initializePopup() {
+        const response = await messagingService.getData();
+        if (response?.timeData) {
+            if (response.display === "daughnut") {
+                updateOptionsStyle(donutOption);
+                updateDisplay(response.timeData, 'donut');
+            } else {
+                updateOptionsStyle(listOption);
+                updateDisplay(response.timeData, 'list');
             }
-        });
+        }
 
-        // Get tracking status to update button
-        chrome.storage.local.get(['isTracking'], (result) => {
-            isTracking = result.isTracking || false;
-            updateButtonStyle(isTracking);
-        });
+        const isTracking = await messagingService.getTrackingStatus();
+        updateButtonStyle(isTracking);
     }
 
     // Event Handlers
-    function handleStartClick() {
+    async function handleStartClick() {
         const newTrackingStatus = startButton.textContent === 'Start';
-        chrome.runtime.sendMessage({ type: 'startOrPause', status: newTrackingStatus }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError.message);
-                return;
+        await messagingService.startOrPause(newTrackingStatus);
+        updateButtonStyle(newTrackingStatus);
+        
+        if (!newTrackingStatus) {
+            const response = await messagingService.getData();
+            if (response?.timeData) {
+                updateDisplay(response.timeData);
             }
-            updateButtonStyle(newTrackingStatus);
-            
-            if (!newTrackingStatus) {
-                chrome.runtime.sendMessage({ type: 'getData' }, (response) => {
-                    if (response && response.timeData) {
-                        updateDisplay(response.timeData);
-                    }
-                });
-            }
-        });
-    }
-
-    function handleClearData(shouldSaveSession) {
-        if (shouldSaveSession) {
-            const session = {
-                timestamp: Date.now(),
-                timeData: {...timeData}
-            };
-            
-            chrome.storage.local.get(['sessions'], (result) => {
-                const sessions = result.sessions || [];
-                sessions.push(session);
-                chrome.storage.local.set({ sessions }, () => {
-                    chrome.runtime.sendMessage({ type: 'clear' }, () => {
-                        timeData = {};
-                        updateDisplay(timeData);
-                    });
-                });
-            });
-        } else {
-            chrome.runtime.sendMessage({ type: 'clear' }, () => {
-                timeData = {};
-                updateDisplay(timeData);
-            });
         }
     }
 
     // Setup event listeners
-    donutOption.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'daughnut' }, (response) => {
-            updateOptionsStyle(donutOption);
-            if (response.timeData) {
-                updateDisplay(response.timeData, 'donut');
-            }
-        });
+    donutOption.addEventListener('click', async () => {
+        const response = await messagingService.setView('daughnut');
+        updateOptionsStyle(donutOption);
+        if (response?.timeData) {
+            updateDisplay(response.timeData, 'donut');
+        }
     });
 
-    listOption.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'list' }, (response) => {
-            updateOptionsStyle(listOption);
-            if (response.timeData) {
-                updateDisplay(response.timeData, 'list');
-            }
-        });
+    listOption.addEventListener('click', async () => {
+        const response = await messagingService.setView('list');
+        updateOptionsStyle(listOption);
+        if (response?.timeData) {
+            updateDisplay(response.timeData, 'list');
+        }
     });
 
     histView.addEventListener('click', () => {
@@ -179,38 +129,28 @@ document.addEventListener('DOMContentLoaded', function() {
     startButton.addEventListener('click', handleStartClick);
 
     clearButton.addEventListener('click', () => {
-        modal.showClearConfirm(handleClearData);
-    });
-
-    // Message listener
-    chrome.runtime.onMessage.addListener((message) => {
-        if (message.timeData) {
-            if (message.type === 'timeUpdateList' && currentView === 'list') {
-                updateDisplay(message.timeData, 'list');
-            } else if (message.type === 'timeUpdateDaughnut' && currentView === 'donut') {
-                updateDisplay(message.timeData, 'donut');
-            } else if (!isTracking) {
-                updateDisplay(message.timeData);
+        modal.showClearConfirm(async (shouldSaveSession) => {
+            if (shouldSaveSession) {
+                await messagingService.saveSession(trackingState.timeData);
+            } else {
+                await messagingService.clearData();
             }
-        }
+            updateDisplay({});
+        });
     });
 
     // Initialize
     donutOption.disabled = true;
     container.innerHTML = '';
     initializePopup();
+    messagingService.setupMessageListener(updateDisplay);
 
-    // Cleanup when popup closes
+    // Cleanup
     window.addEventListener('unload', () => {
-        if (chart) {
-            chart.destroy();
-        }
-        if (listView) {
-            listView.destroy();
-        }
+        chart?.destroy();
+        listView?.destroy();
         modal.destroy();
     });
-
 
 
 
