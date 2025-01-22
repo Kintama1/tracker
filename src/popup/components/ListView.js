@@ -31,7 +31,7 @@ export class ListView {
         if (!this.initialized) {
             this.initialize();
         }
-        
+        //updating the list each time by sorting the domains (I assume this operation is expensive, one thing is to keep track of the one next to it in a sort of linked list build)
         const sortedDomains = Object.entries(timeData)
             .sort(([, a], [, b]) => b[1] - a[1]);
         
@@ -50,7 +50,7 @@ export class ListView {
             `;
         }
     }
-
+    //making the domains clickable links
     createDomainLink(domain) {
         const link = document.createElement('a');
         link.href = `https://${domain}`;

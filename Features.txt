@@ -11,3 +11,7 @@ UI implementation:
 
 
 
+Updates to implement:
+
+- No need to handle the display update in the background no? I can change that messaging altogether and just track it in the frontend
+- Improve the UI experience of saving the sessions

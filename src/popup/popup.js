@@ -6,6 +6,7 @@ import { Modal } from './components/Modal';
 import './popup.css';
 document.addEventListener('DOMContentLoaded', function() {
 
+    // DOM Elements to interact with
     const container = document.getElementById('time-tracker');
     const startButton = document.getElementById('start');
     const clearButton = document.getElementById('clear');
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return listView;
     }
-
+    //updates display based on the current view
     function updateDisplay(newTimeData, displayType = trackingState.currentView) {
         trackingState.setTimeData(newTimeData);
         
@@ -96,7 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const newTrackingStatus = startButton.textContent === 'Start';
         await messagingService.startOrPause(newTrackingStatus);
         updateButtonStyle(newTrackingStatus);
-        
+
+        //if paused and not tracking, get data to display paused data
         if (!newTrackingStatus) {
             const response = await messagingService.getData();
             if (response?.timeData) {
@@ -151,19 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
         listView?.destroy();
         modal.destroy();
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
     
     // Add styles
     const style = document.createElement('style');

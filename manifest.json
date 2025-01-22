@@ -3,6 +3,11 @@
     "name": "time tracker",
     "version": "1.0",
     "description": "This extension will track the time you spend on each website",
+    "icons": {
+        "16": "assets/logo/logo-16.png",
+        "48": "assets/logo/logo-48.png",
+        "128": "assets/logo/logo-128.png"
+    },
     "permissions": [
         "tabs",
         "storage" 

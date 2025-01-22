@@ -2,6 +2,7 @@ import { ChartComponent } from './components/Chart.js';
 import { ListView } from './components/ListView.js';
 import { formatTime } from './utils/timeFormatter';
 import './history.css';
+
 document.addEventListener('DOMContentLoaded', function() {
     const backButton = document.getElementById('back-to-tracker');
     const sessionList = document.getElementById('session-list');
@@ -36,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const viewContainer = document.createElement('div');
         viewContainer.className = 'view-container';
         
-        expandedView.appendCçhild(toggleContainer);
+        expandedView.appendChild(toggleContainer);
         expandedView.appendChild(viewContainer);
 
         // Initialize with chart view

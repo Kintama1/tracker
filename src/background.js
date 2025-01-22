@@ -1,3 +1,6 @@
+// This file contains the background script for the extension. 
+// It listens for messages from the popup and content scripts, and updates the time spent on websites accordingly.
+
 let activeTabId = null;
 let siteTimeData = {};
 let currentFavIcon = null;
@@ -25,9 +28,8 @@ function incrementTime(domain) {
     if (!domain) return;
     
     siteTimeData[domain][1] = (siteTimeData[domain][1] || 0) + 1;
-    console.log(`Time incremented for ${domain}:`, siteTimeData[domain][1]);
     
-    // Save to storage and notify popup if open
+    // Save to storage and notify popup if open--> if performance review is too laggy, I will update this write to storage to be less frequent
     chrome.storage.local.set({ siteTimeData }, () => {
         if (display === "list") {
         chrome.runtime.sendMessage({
@@ -54,7 +56,8 @@ function startTracking() {
     if (updateInterval) {
         clearInterval(updateInterval);
     }
-    
+    //essentially this is the tracker that increments the time spent on the current website by running this function e
+    //every second if the tracker is tracking and the website is open
     updateInterval = setInterval(() => {
         if (isTracking && currentDomain) {
             incrementTime(currentDomain);
@@ -62,6 +65,7 @@ function startTracking() {
     }, 1000);
 }
 
+//function that stops the tracking and clears the update interval
 function stopTracking() {
     if (updateInterval) {
         clearInterval(updateInterval);
@@ -98,7 +102,7 @@ function favRoutine(currentDomain, currentFavIcon) {
         console.error('Domain is null, skipping favicon handling.');
         return;
     }
-    // Fallback for websites without a favicon
+    // Fallback for websites without a favicon, attempting to fetch from the root domain
     if (!currentFavIcon) {
         const fallbackFaviconUrl = `https://${currentDomain}/favicon.ico`;
         fetchFavicon(fallbackFaviconUrl, (validFaviconUrl) => {
@@ -112,7 +116,6 @@ function favRoutine(currentDomain, currentFavIcon) {
 
 
 // Message handling
-///
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -151,7 +154,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'success' });
         return true;
     }
-    
+    //clears the time data from the storage currently in session
     if (message.type === 'clear') {
         siteTimeData = {};
         chrome.storage.local.set({ siteTimeData });
@@ -159,6 +162,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'success' });
         return true;
     }
+    //After all this, I wonder why I am tracking the display for both the frontend and the backend
+    // (I think it is because I had to track the frontend to change the style, on the list of things that could be optimized though because theoretically, I could just track the display in frontend as it is the same data sent huh)
+
+    //this is the message that is sent to the popup to display the daughnut chart
     if (message.type === 'daughnut') {
         display = "daughnut";
         console.log('Displaying: ', display, 'for tracking status: ', isTracking);  
@@ -171,6 +178,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         return true;
     }
+
+    //this is the message that is sent to the popup to display the list chart
     if (message.type === 'list') {  
         display = "list";
         console.log('Displaying: ', display, 'for tracking status: ', isTracking);  
@@ -191,6 +200,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Tab focus handling
 
+
+//tab lost focus update, to make this better in the future, I wanna log the times it lost focus or stopped tracking because time went off
 chrome.windows.onFocusChanged.addListener((windowId) => {
     if (!isTracking) return;
     
@@ -217,7 +228,7 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     }
 });
 
-// listens to when a tab becomes the active tab i the browser
+// listens to when a tab becomes the active tab in the browser
 chrome.tabs.onActivated.addListener((activeInfo) => {
     if (!isTracking) return;
     stopTracking();

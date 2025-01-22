@@ -4,6 +4,8 @@ import { drawFaviconsOnDonut } from '../utils/iconLoader';
 
 export class ChartComponent {
     constructor(container, onOthersClick) {
+
+        // The container element where the chart will be rendered
         this.container = container;
         this.onOthersClick = onOthersClick;
         this.donutChart = null;
@@ -11,6 +13,7 @@ export class ChartComponent {
         this.otherDomains = [];
         this.totalTime = 0;
 
+        // Chart.js options
         this.chartOptions = {
             cutout: '70%',
             responsive: true,
@@ -19,6 +22,7 @@ export class ChartComponent {
                 legend: { display: false },
                 tooltip: {
                     enabled: true,
+                    // Custom tooltip label (could be improved for better tooltip representation  )
                     callbacks: {
                         label: function(context) {
                             const domain = context.label;
@@ -34,7 +38,7 @@ export class ChartComponent {
             maintainAspectRatio: false
         };
     }
-
+    //Timer plugin that will display the total time spent on the chart
     createTimerPlugin() {
         return {
             id: 'timerPlugin',
@@ -58,6 +62,8 @@ export class ChartComponent {
         };
     }
 
+    //Update the chart with the new time data. You know there must be an optimal way to do this by just updating the data that is being updated when it is open
+    // plus when enough time has passed You don't really notice updates to the chart
     update(timeData) {
         const maxSegments = 5;
         const colorPalette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD'];
@@ -86,6 +92,7 @@ export class ChartComponent {
         this.updateFavicons(favicons);
     }
 
+    //Create the chart with the given data
     createChart(labels, data, colorPalette, maxSegments, favicons) {
         this.container.innerHTML = '';
         const canvas = document.createElement('canvas');
@@ -108,7 +115,7 @@ export class ChartComponent {
         this.donutChart.faviconData = favicons;
         this.setupEventListeners(canvas);
     }
-
+    //Setup the event listeners for the chart, especially for the 'Others' segment and hovering
     setupEventListeners(canvas) {
         let isHoveringOthers = false;
 
@@ -148,7 +155,7 @@ export class ChartComponent {
             }
         });
     }
-
+    //updating the data of the chart
     updateChart(labels, data, favicons) {
         this.donutChart.data.labels = labels;
         this.donutChart.data.datasets[0].data = data;
@@ -156,6 +163,7 @@ export class ChartComponent {
         this.donutChart.update('none');
     }
 
+    //Update the favicons on the chart and redrawing them along the updated chart (Another thing that might be optimized)
     updateFavicons(favicons) {
         if (this.faviconUpdateInterval) {
             clearInterval(this.faviconUpdateInterval);

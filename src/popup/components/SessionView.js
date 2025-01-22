@@ -1,6 +1,6 @@
 import { ChartComponent } from './Chart';
 import { ListView } from './ListView';
-
+// not used yet, but will be used to refractor histroy.js in the future
 export class SessionView {
     constructor(sessionElement, sessionData) {
         this.sessionElement = sessionElement;
