@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "time tracker",
+    "name": "Web tracker",
     "version": "1.0",
     "description": "This extension will track the time you spend on each website",
     "icons": {
@@ -15,6 +15,7 @@
     "host_permissions": [
         "https://*/*"
     ],
+    "privacy_policy": "privacy.md",
     "background": {
         "service_worker": "background.js"
     },

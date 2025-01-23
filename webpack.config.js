@@ -90,6 +90,10 @@ module.exports = (env, argv) => {
                     {
                         from: 'assets',
                         to: 'assets'
+                    },
+                    {
+                        from: 'privacy.md',
+                        to: 'privacy.md'
                     }
                 ]
             }),
